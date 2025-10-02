@@ -1,0 +1,15 @@
+# Build artifacts
+neverland
+*.o
+*.out
+*.exe
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CMake build directory
+build/
