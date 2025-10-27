@@ -21,7 +21,7 @@ class Solution
 int main()
 {
     Solution sol;
-    vector<int>nums = {1,2,3,10,11,12};
+    vector<int>nums = {1,1,2,2,3,3,10,10,11,11,12,12};
     cout<<sol.removeDuplicates(nums); cout<<endl;
     for(int inte : nums) cout<<inte<<" ";
 }
