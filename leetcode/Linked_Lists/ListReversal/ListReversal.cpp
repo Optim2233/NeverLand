@@ -15,35 +15,23 @@ class Solution {
 public:
     ListNode* reverseList(ListNode* head) {
         
+        return Iterative(head);
     };
 
     ListNode* Iterative(ListNode *head)  
     {
         
         if(!(head) || !(head->next)) return head;
-        ListNode *dummy = new ListNode(0);
-        ListNode *current = head, *tail = dummy;
-        while(current)
+        ListNode *Previous_Node = nullptr;
+        ListNode *current = head;
+        while(current) 
         {
-            current = current->next;
-            if(current->next == nullptr)
-            {
-                tail->next = current;
-            }
+            ListNode *Next_Node = current->next;
+            current->next = Previous_Node;
+            Previous_Node = current;
+            current = Next_Node;
         }
-    }
-    ListNode *Recursive(ListNode *head)
-    {
-        if(!(head) || !(head->next)) return head;
-        ListNode *current = head, *tail = dummy;
-        while(current)
-        {
-            current = current->next;
-            if(current->next == nullptr)
-            {
-                tail->next = current;
-            }
-        }
+        return Previous_Node;
     }
 };
 int main()
@@ -58,7 +46,12 @@ int main()
     ListNode *List_node1 = new ListNode(1,List_node2);
 
     ListNode *head = List_node1;
-    
+    Solution sol;
+    head = sol.reverseList(head);
+     while(head)
+    {
+        cout<<head->val<<" ";
+        head = head->next;
+    }\
     return 0;
-   
 }
