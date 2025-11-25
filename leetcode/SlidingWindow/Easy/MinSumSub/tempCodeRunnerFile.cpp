@@ -1,0 +1,1 @@
+if(sum > 0) min_sum = min(min_sum , sum);
