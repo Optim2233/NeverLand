@@ -1,0 +1,1 @@
+while(right - left + 1- max_freq > k){freq[s[left]]--; left++;}

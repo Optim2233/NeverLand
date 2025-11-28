@@ -35,6 +35,9 @@ int main()
     }
     Solution sol;
     cout<<endl<<sol.minimumDifference(str1, 5);
-    
+    cout<<endl;
+    int i = 'a' + 'b' + 'c';
+    int j = 'b' + 'a' + 'c';
+    cout<<boolalpha<<(i == j)? true : false; 
 
 }
