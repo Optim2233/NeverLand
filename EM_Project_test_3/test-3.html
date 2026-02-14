@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Analytical Reactor Dynamics Dashboard</title>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+	<style>
+		:root {
+			--bg0: #070b12;
+			--bg1: #0f1624;
+			--bg2: #1a2639;
+			--line: #3d526f;
+			--text: #dce9ff;
+			--muted: #90a8cb;
+			--cyan: #43d6ff;
+			--green: #2bd784;
+			--amber: #ffb347;
+			--red: #ff4d5d;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			min-height: 100vh;
+			font-family: "Segoe UI", "Consolas", "Roboto Mono", sans-serif;
+			color: var(--text);
+			background:
+				radial-gradient(circle at 15% 10%, #1f2a42 0%, transparent 45%),
+				radial-gradient(circle at 85% 90%, #1a3340 0%, transparent 40%),
+				linear-gradient(160deg, var(--bg0), #06090f 35%, #0b1220);
+			padding: 14px;
+		}
+
+		.shell {
+			max-width: 1550px;
+			margin: 0 auto;
+			border: 1px solid var(--line);
+			border-radius: 14px;
+			overflow: hidden;
+			background: linear-gradient(180deg, rgba(20, 30, 48, 0.75), rgba(10, 16, 28, 0.9));
+			box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+			min-height: calc(100vh - 28px);
+			display: flex;
+			flex-direction: column;
+		}
+
+		.topbar {
+			padding: 10px 16px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			border-bottom: 1px solid var(--line);
+			background: linear-gradient(90deg, #101a2b, #18253a);
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			font-size: 0.86rem;
+		}
+
+		.status-chip {
+			border: 1px solid #4a617f;
+			padding: 5px 10px;
+			border-radius: 999px;
+			color: var(--muted);
+		}
+
+		.status-chip.unstable {
+			color: #fff;
+			border-color: var(--red);
+			background: #5a121d;
+		}
+
+		.layout {
+			display: grid;
+			grid-template-columns: 340px 1fr;
+			flex: 1;
+			min-height: 0;
+		}
+
+		.panel {
+			border-right: 1px solid var(--line);
+			padding: 14px;
+			overflow: auto;
+			background: linear-gradient(180deg, rgba(8, 14, 24, 0.8), rgba(12, 20, 32, 0.9));
+		}
+
+		.main-zone {
+			display: grid;
+			grid-template-rows: auto 1fr;
+			min-height: 0;
+			overflow: hidden;
+		}
+
+		.top-controls {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(240px, 1fr));
+			gap: 10px;
+			padding: 10px;
+			border-bottom: 1px solid var(--line);
+			background: linear-gradient(180deg, rgba(11, 19, 31, 0.95), rgba(8, 14, 23, 0.9));
+			overflow: auto;
+		}
+
+		.top-controls .section {
+			margin-bottom: 0;
+		}
+
+		.section {
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			padding: 10px;
+			margin-bottom: 10px;
+			background: rgba(10, 15, 24, 0.62);
+		}
+
+		.section h3 {
+			margin: 0 0 10px;
+			font-size: 0.82rem;
+			letter-spacing: 0.07em;
+			color: var(--muted);
+			text-transform: uppercase;
+		}
+
+		.row {
+			margin-bottom: 10px;
+			padding: 8px;
+			border: 1px solid rgba(92, 122, 158, 0.25);
+			border-radius: 8px;
+			background: rgba(9, 14, 22, 0.45);
+			transition: border-color 0.15s ease, background 0.15s ease;
+		}
+
+		.row:hover {
+			border-color: rgba(125, 171, 221, 0.55);
+			background: rgba(12, 20, 32, 0.7);
+		}
+
+		label {
+			display: flex;
+			justify-content: space-between;
+			gap: 8px;
+			margin-bottom: 4px;
+			font-size: 0.8rem;
+			color: #a8bfdf;
+		}
+
+		input[type="range"] {
+			width: 100%;
+			accent-color: var(--cyan);
+		}
+
+		.val {
+			color: #fff;
+			font-weight: 600;
+			min-width: 60px;
+			text-align: right;
+		}
+
+		.actions {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 8px;
+		}
+
+		button {
+			border: 1px solid #466183;
+			background: linear-gradient(180deg, #1a2a42, #111b2e);
+			color: var(--text);
+			border-radius: 8px;
+			padding: 8px;
+			cursor: pointer;
+			font-weight: 600;
+			font-size: 0.82rem;
+		}
+
+		button:disabled {
+			opacity: 0.55;
+			cursor: default;
+		}
+
+		.danger {
+			border-color: #93323e;
+			background: linear-gradient(180deg, #4a1821, #2f1016);
+			color: #ffd7dc;
+		}
+
+		.readout {
+			font-size: 0.8rem;
+			line-height: 1.35;
+			color: #c9daf6;
+			white-space: pre-line;
+		}
+
+		.readout strong {
+			color: #fff;
+		}
+
+		.hint-box {
+			border: 1px solid #35506f;
+			border-radius: 8px;
+			padding: 8px;
+			background: rgba(12, 20, 32, 0.75);
+		}
+
+		.hint-title {
+			color: #d6e6ff;
+			font-size: 0.8rem;
+			margin-bottom: 4px;
+			font-weight: 700;
+			letter-spacing: 0.02em;
+		}
+
+		.hint-text {
+			color: #a8bfdf;
+			font-size: 0.78rem;
+			line-height: 1.35;
+			white-space: pre-line;
+		}
+
+		.equation {
+			font-size: 0.82rem;
+			line-height: 1.35;
+			color: #b8cceb;
+			background: rgba(12, 20, 32, 0.8);
+			border: 1px solid #344a66;
+			border-radius: 8px;
+			padding: 8px;
+			white-space: pre-line;
+		}
+
+		.dash {
+			padding: 12px;
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			grid-template-rows: minmax(0, 1fr);
+			gap: 10px;
+			min-height: 0;
+		}
+
+		.card {
+			border: 1px solid var(--line);
+			border-radius: 10px;
+			background: linear-gradient(180deg, rgba(12, 20, 32, 0.75), rgba(8, 14, 23, 0.92));
+			padding: 8px;
+			min-height: 0;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+		}
+
+		.card.full {
+			grid-column: span 2;
+		}
+
+		.title {
+			margin: 0 0 6px;
+			font-size: 0.75rem;
+			text-transform: uppercase;
+			letter-spacing: 0.07em;
+			color: var(--muted);
+		}
+
+		.plot {
+			flex: 1;
+			min-height: 0;
+			position: relative;
+		}
+
+		.plot canvas {
+			width: 100% !important;
+			height: 100% !important;
+			display: block;
+		}
+
+		@media (max-width: 1200px) {
+			.layout { grid-template-columns: 1fr; }
+			.panel { border-right: none; border-bottom: 1px solid var(--line); max-height: 42vh; }
+			.top-controls { grid-template-columns: 1fr; }
+			.dash { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(240px, 1fr)); }
+			.card.full { grid-column: auto; }
+		}
+	</style>
+</head>
+<body>
+	<div class="shell">
+		<div class="topbar">
+			<div>Time-Dependent Analytical Reactor Dynamics</div>
+			<div id="modeChip" class="status-chip">Status: Monitoring</div>
+		</div>
+
+		<div class="layout">
+			<aside class="panel">
+				<div class="section">
+					<h3>Feedback Coefficients</h3>
+					<div class="row">
+						<label>Control Rod Depth [% insertion] <span id="rodVal" class="val"></span></label>
+						<input id="rodDepth" type="range" min="0" max="100" step="1" value="62"
+							data-effect="Higher rod insertion usually increases damping and stability in this mapped model." />
+					</div>
+					<div class="row">
+						<label>k<sub>r</sub> (rod worth) [delta-rho fraction] <span id="krVal" class="val"></span></label>
+						<input id="kr" type="range" min="0" max="2" step="0.01" value="0.95"
+							data-effect="Amplifies the stabilizing impact of rod insertion on effective damping zeta." />
+					</div>
+					<div class="row">
+						<label>k<sub>x</sub> (precursor feedback) [1/p.u.] <span id="kxVal" class="val"></span></label>
+						<input id="kx" type="range" min="0" max="1.5" step="0.01" value="0.30"
+							data-effect="Higher kx raises precursor contribution to zeta; typically more damping/stability." />
+					</div>
+					<div class="row">
+						<label>k<sub>v</sub> (void coefficient) [1/p.u.] <span id="kvVal" class="val"></span></label>
+						<input id="kv" type="range" min="0" max="2.2" step="0.01" value="1.05"
+							data-effect="Higher kv subtracts more from zeta via void feedback; can push poles right (less stable)." />
+					</div>
+					<div class="row">
+						<label>c (void gain from power) [p.u./p.u.] <span id="cVal" class="val"></span></label>
+						<input id="cVoid" type="range" min="0" max="2" step="0.01" value="0.42"
+							data-effect="Controls how strongly power level feeds into the effective gain term K." />
+					</div>
+					<div class="row">
+						<label>&zeta;<sub>moderator</sub> bias [dimensionless] <span id="zmodVal" class="val"></span></label>
+						<input id="zModerator" type="range" min="-0.4" max="1.2" step="0.01" value="0.14"
+							data-effect="Direct baseline shift of effective damping zeta. More negative means less stable." />
+					</div>
+				</div>
+
+				<div class="section">
+					<h3>Xenon Kinetics</h3>
+					<div class="row">
+						<label>a (precursor production) [1/s] <span id="aVal" class="val"></span></label>
+						<input id="aProd" type="range" min="0" max="1.2" step="0.01" value="0.22"
+							data-effect="Raises effective gain K in this reduced model; response amplitude tends to increase." />
+					</div>
+					<div class="row">
+						<label>b (precursor decay) [1/s] <span id="bVal" class="val"></span></label>
+						<input id="bDecay" type="range" min="0.01" max="1.2" step="0.01" value="0.08"
+							data-effect="Higher decay reduces effective gain K contribution from precursor inventory." />
+					</div>
+				</div>
+
+				<div class="section">
+					<h3>Live Stability</h3>
+					<div id="stabilityReadout" class="readout"></div>
+				</div>
+
+				<div class="section">
+					<h3>Laplace Model</h3>
+					<div id="tfReadout" class="equation"></div>
+				</div>
+
+			</aside>
+
+			<section class="main-zone">
+				<div class="top-controls">
+					<div class="section">
+						<h3>Runtime</h3>
+						<div class="row" style="margin-bottom: 8px;">
+							<label>Simulation Speed (real-time factor) <span id="speedVal" class="val"></span></label>
+							<input id="speed" type="range" min="0.25" max="8" step="0.25" value="1"
+								data-effect="Increases animation pace only. Physics stays the same; only playback speed changes." />
+						</div>
+						<div class="actions">
+							<button id="runBtn">Run Simulation</button>
+							<button id="stopBtn">Stop</button>
+							<button id="chernobylBtn" class="danger">Chernobyl Scenario</button>
+						</div>
+					</div>
+
+					<div class="section">
+						<h3>Core Dynamics Inputs</h3>
+						<div class="row">
+							<label>Natural Frequency &omega;<sub>n</sub> [rad/s] <span id="wnVal" class="val"></span></label>
+							<input id="wn" type="range" min="0.2" max="8" step="0.05" value="2.2"
+								data-effect="Higher wn gives faster oscillations/transients; poles move farther from the origin." />
+						</div>
+						<div class="row">
+							<label>Initial Power P(0) [% of P<sub>nom</sub>] <span id="p0Val" class="val"></span></label>
+							<input id="p0" type="range" min="0.01" max="2.5" step="0.01" value="0.35"
+								data-effect="Sets where the power curve starts at t=0. Larger value starts from higher initial power." />
+						</div>
+						<div class="row">
+							<label>Initial dP/dt [p.u./s] <span id="q0Val" class="val"></span></label>
+							<input id="q0" type="range" min="-2" max="2" step="0.01" value="0.00"
+								data-effect="Initial slope of power. Positive makes power rise immediately; negative makes it drop first." />
+						</div>
+						<div class="row">
+							<label>Initial Precursor C(0) [p.u.] <span id="x0Val" class="val"></span></label>
+							<input id="x0" type="range" min="0" max="4" step="0.01" value="0.25"
+								data-effect="Raises delayed-neutron feedback contribution in the mapped damping term." />
+						</div>
+						<div class="row">
+							<label>Initial X-Window (s) <span id="xwinVal" class="val"></span></label>
+							<input id="xwin" type="range" min="20" max="300" step="5" value="80"
+								data-effect="Initial visible time span. The chart can still pan/zoom as the simulation progresses." />
+						</div>
+					</div>
+
+					<div class="section">
+						<h3>Slider Guide</h3>
+						<div class="hint-box">
+							<div class="hint-title">What Will Happen</div>
+							<div id="sliderHintText" class="hint-text">Hover, focus, or move a slider to see its effect on power response and pole locations.</div>
+							<div id="chernobylNote" class="hint-text"></div>
+						</div>
+					</div>
+				</div>
+
+				<main class="dash">
+					<section class="card">
+						<p class="title">Reactor Power vs Time</p>
+						<div class="plot"><canvas id="powerChart"></canvas></div>
+					</section>
+					<section class="card">
+						<p class="title">Pole Map in Complex Plane</p>
+						<div class="plot"><canvas id="poleChart"></canvas></div>
+					</section>
+				</main>
+			</section>
+		</div>
+	</div>
+
+	<script>
+	const els = {
+		runBtn: document.getElementById("runBtn"),
+		stopBtn: document.getElementById("stopBtn"),
+		chernobylBtn: document.getElementById("chernobylBtn"),
+		modeChip: document.getElementById("modeChip"),
+		stabilityReadout: document.getElementById("stabilityReadout"),
+		tfReadout: document.getElementById("tfReadout"),
+		wn: document.getElementById("wn"),
+		p0: document.getElementById("p0"),
+		q0: document.getElementById("q0"),
+		x0: document.getElementById("x0"),
+		xwin: document.getElementById("xwin"),
+		rodDepth: document.getElementById("rodDepth"),
+		kr: document.getElementById("kr"),
+		kx: document.getElementById("kx"),
+		kv: document.getElementById("kv"),
+		cVoid: document.getElementById("cVoid"),
+		zModerator: document.getElementById("zModerator"),
+		aProd: document.getElementById("aProd"),
+		bDecay: document.getElementById("bDecay"),
+		speed: document.getElementById("speed"),
+		wnVal: document.getElementById("wnVal"),
+		p0Val: document.getElementById("p0Val"),
+		q0Val: document.getElementById("q0Val"),
+		x0Val: document.getElementById("x0Val"),
+		xwinVal: document.getElementById("xwinVal"),
+		rodVal: document.getElementById("rodVal"),
+		krVal: document.getElementById("krVal"),
+		kxVal: document.getElementById("kxVal"),
+		kvVal: document.getElementById("kvVal"),
+		cVal: document.getElementById("cVal"),
+		zmodVal: document.getElementById("zmodVal"),
+		aVal: document.getElementById("aVal"),
+		bVal: document.getElementById("bVal"),
+		speedVal: document.getElementById("speedVal"),
+		sliderHintText: document.getElementById("sliderHintText")
+		,chernobylNote: document.getElementById("chernobylNote")
+	};
+
+	const MAX_POINTS = 5000;
+	const ABS_LIMIT = 1e8;
+	let powerChart;
+	let poleChart;
+	let animationFrameId = null;
+
+	const sim = {
+		running: false,
+		simTime: 0,
+		x1: 0,
+		x2: 0,
+		lastTs: null,
+		points: [],
+		effective: null
+	};
+
+	function num(id) {
+		return Number(els[id].value);
+	}
+
+	function syncLabels() {
+		els.wnVal.textContent = `${num("wn").toFixed(2)} rad/s`;
+		els.p0Val.textContent = `${(num("p0") * 100).toFixed(1)}%`;
+		els.q0Val.textContent = `${num("q0").toFixed(2)} /s`;
+		els.x0Val.textContent = `${num("x0").toFixed(2)} p.u.`;
+		els.xwinVal.textContent = `${Math.round(num("xwin"))} s`;
+		els.rodVal.textContent = `${Math.round(num("rodDepth"))}%`;
+		els.krVal.textContent = num("kr").toFixed(2);
+		els.kxVal.textContent = num("kx").toFixed(2);
+		els.kvVal.textContent = num("kv").toFixed(2);
+		els.cVal.textContent = num("cVoid").toFixed(2);
+		els.zmodVal.textContent = num("zModerator").toFixed(2);
+		els.aVal.textContent = `${num("aProd").toFixed(2)} 1/s`;
+		els.bVal.textContent = `${num("bDecay").toFixed(2)} 1/s`;
+		els.speedVal.textContent = `${num("speed").toFixed(2)}x`;
+	}
+
+	function bindSliderHints() {
+		const defaultHint = "Hover, focus, or move a slider to see its effect on power response and pole locations.";
+		const sliders = document.querySelectorAll("input[type=\"range\"]");
+		sliders.forEach((el) => {
+			const effect = el.getAttribute("data-effect");
+			if (!effect) return;
+			const show = () => {
+				els.sliderHintText.textContent = effect;
+			};
+			const reset = () => {
+				els.sliderHintText.textContent = defaultHint;
+			};
+			el.addEventListener("mouseenter", show);
+			el.addEventListener("focus", show);
+			el.addEventListener("input", show);
+			el.addEventListener("mouseleave", reset);
+			el.addEventListener("blur", reset);
+		});
+	}
+
+	function getRawParams() {
+		return {
+			wn: Math.max(0.2, num("wn")),
+			p0: Math.max(0.01, num("p0")),
+			q0: num("q0"),
+			x0: Math.max(0, num("x0")),
+			xWindow: num("xwin"),
+			rodDepth: num("rodDepth") / 100,
+			kr: num("kr"),
+			kx: num("kx"),
+			kv: num("kv"),
+			cVoid: num("cVoid"),
+			zModerator: num("zModerator"),
+			aProd: num("aProd"),
+			bDecay: num("bDecay"),
+			speed: Math.max(0.25, num("speed"))
+		};
+	}
+
+	function effectiveFromRaw(p) {
+		const zeta = p.zModerator + p.kr * p.rodDepth + p.kx * p.x0 - p.kv * (p.cVoid * Math.max(0, p.p0));
+		const gain = Math.max(0.05, p.p0 * (1 + p.aProd) - p.bDecay * p.x0 + 0.25 * p.cVoid + 0.05);
+		return {
+			K: gain,
+			zeta,
+			wn: p.wn,
+			xWindow: p.xWindow,
+			initX1: p.p0,
+			initX2: p.q0,
+			speed: p.speed,
+			raw: p
+		};
+	}
+
+	function computePoles(zeta, wn) {
+		const disc = zeta * zeta - 1;
+		if (disc >= 0) {
+			const root = wn * Math.sqrt(disc);
+			const base = -zeta * wn;
+			return [{ re: base + root, im: 0 }, { re: base - root, im: 0 }];
+		}
+		const real = -zeta * wn;
+		const imag = wn * Math.sqrt(1 - zeta * zeta);
+		return [{ re: real, im: imag }, { re: real, im: -imag }];
+	}
+
+	function classifySystem(poles) {
+		const maxReal = Math.max(...poles.map((p) => p.re));
+		const hasComplex = poles.some((p) => Math.abs(p.im) > 1e-9);
+		if (maxReal > 1e-9) return { state: "unstable", text: "UNSTABLE: right-half-plane pole (Re{s} > 0)" };
+		if (Math.abs(maxReal) <= 1e-9) return { state: "warning", text: "Marginal: poles on imaginary axis" };
+		if (hasComplex) return { state: "stable", text: "Stable oscillatory: complex conjugate poles" };
+		return { state: "stable", text: "Stable non-oscillatory: real negative poles" };
+	}
+
+	function formatComplex(re, im) {
+		if (Math.abs(im) < 1e-9) return `${re.toFixed(3)}`;
+		return `${re.toFixed(3)} ${im >= 0 ? "+" : "-"} j${Math.abs(im).toFixed(3)}`;
+	}
+
+	function buildPowerChart(unstable, xWindowSec) {
+		if (powerChart) powerChart.destroy();
+		powerChart = new Chart(document.getElementById("powerChart"), {
+			type: "line",
+			data: {
+				datasets: [{
+					label: "Power (p.u.)",
+					data: [],
+					borderColor: unstable ? "#ff4d5d" : "#43d6ff",
+					borderWidth: 1.8,
+					pointRadius: 0,
+					tension: 0
+				}]
+			},
+			options: {
+				parsing: false,
+				responsive: true,
+				maintainAspectRatio: false,
+				animation: false,
+				normalized: true,
+				plugins: { legend: { labels: { color: "#d6e6ff" } } },
+				scales: {
+					x: { type: "linear", min: 0, max: xWindowSec, title: { display: true, text: "Time (s)", color: "#a6bddf" }, ticks: { color: "#a8bfdf", maxTicksLimit: 8 }, grid: { color: "rgba(100,130,170,0.2)" } },
+					y: { min: -2, max: 2, title: { display: true, text: "Power (p.u.)", color: "#a6bddf" }, ticks: { color: "#a8bfdf" }, grid: { color: "rgba(100,130,170,0.2)" } }
+				}
+			}
+		});
+	}
+
+	function buildPoleChart(poles, unstable) {
+		if (poleChart) poleChart.destroy();
+		const maxAxis = Math.max(1, ...poles.map((p) => Math.max(Math.abs(p.re), Math.abs(p.im))), 0.5) * 1.5;
+
+		poleChart = new Chart(document.getElementById("poleChart"), {
+			type: "scatter",
+			data: {
+				datasets: [
+					{
+						label: "Pole Locations",
+						data: poles.map((p) => ({ x: p.re, y: p.im })),
+						pointBackgroundColor: unstable ? "#ff4d5d" : "#2bd784",
+						pointBorderColor: "#ffffff",
+						pointRadius: 6
+					},
+					{
+						label: "Imaginary Axis",
+						data: [{ x: 0, y: -maxAxis }, { x: 0, y: maxAxis }],
+						showLine: true,
+						borderColor: "#8faed6",
+						borderDash: [7, 6],
+						pointRadius: 0
+					},
+					{
+						label: "RHP Warning Zone",
+						data: [{ x: 0, y: -maxAxis }, { x: maxAxis, y: -maxAxis }, { x: maxAxis, y: maxAxis }, { x: 0, y: maxAxis }, { x: 0, y: -maxAxis }],
+						showLine: true,
+						borderColor: "rgba(255,77,93,0.75)",
+						backgroundColor: "rgba(255,77,93,0.12)",
+						fill: true,
+						pointRadius: 0
+					}
+				]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				animation: false,
+				plugins: { legend: { labels: { color: "#d6e6ff" } } },
+				scales: {
+					x: { min: -maxAxis, max: maxAxis, title: { display: true, text: "Re(s)", color: "#a6bddf" }, ticks: { color: "#a8bfdf" }, grid: { color: "rgba(100,130,170,0.2)" } },
+					y: { min: -maxAxis, max: maxAxis, title: { display: true, text: "Im(s)", color: "#a6bddf" }, ticks: { color: "#a8bfdf" }, grid: { color: "rgba(100,130,170,0.2)" } }
+				}
+			}
+		});
+	}
+
+	function compressPoints() {
+		if (sim.points.length <= MAX_POINTS) return;
+		const reduced = [];
+		for (let i = 0; i < sim.points.length; i += 2) reduced.push(sim.points[i]);
+		sim.points = reduced;
+	}
+
+	function adjustXAxis(currentTime) {
+		const xScale = powerChart.options.scales.x;
+		const span = Math.max(1e-6, xScale.max - xScale.min);
+		const leadMargin = span * 0.08;
+		if (currentTime <= xScale.max - leadMargin) return;
+		if (xScale.max < 320) {
+			xScale.max = Math.max(currentTime * 1.3, xScale.max * 1.6);
+			xScale.min = 0;
+		} else {
+			const shift = span * 0.25;
+			xScale.min += shift;
+			xScale.max += shift;
+		}
+	}
+
+	function adjustYAxis(latestY) {
+		if (!Number.isFinite(latestY)) return;
+		const yScale = powerChart.options.scales.y;
+		let min = yScale.min;
+		let max = yScale.max;
+		const span = Math.max(1e-6, max - min);
+		const edge = span * 0.1;
+		let changed = false;
+
+		if (latestY >= max - edge) {
+			if (max < 4000) max += span * 0.75;
+			else {
+				const shift = span * 0.3;
+				min += shift;
+				max += shift;
+			}
+			changed = true;
+		}
+		if (latestY <= min + edge) {
+			if (Math.abs(min) < 4000) min -= span * 0.75;
+			else {
+				const shift = span * 0.3;
+				min -= shift;
+				max -= shift;
+			}
+			changed = true;
+		}
+
+		if (changed) {
+			yScale.min = Math.max(-ABS_LIMIT, min);
+			yScale.max = Math.min(ABS_LIMIT, max);
+		}
+	}
+
+	function cancelLoop() {
+		if (animationFrameId !== null) {
+			cancelAnimationFrame(animationFrameId);
+			animationFrameId = null;
+		}
+	}
+
+	function updateReadouts(eff, poles, cls) {
+		els.stabilityReadout.textContent =
+`State: ${cls.text}
+Characteristic: s^2 + 2 zeta wn s + wn^2 = 0
+Effective zeta = ${eff.zeta.toFixed(4)}
+Effective gain K = ${eff.K.toFixed(4)}
+wn = ${eff.wn.toFixed(3)} rad/s`;
+
+		els.tfReadout.textContent =
+`Model (reduced order): x'' + 2 zeta wn x' + wn^2 x = K
+Laplace (with initial conditions):
+X(s) = (K/s) / (s^2 + 2 zeta wn s + wn^2)
+		 + (s x0 + v0 + 2 zeta wn x0) / (s^2 + 2 zeta wn s + wn^2)
+G(s) = 1 / (s^2 + 2 zeta wn s + wn^2)
+
+x0 = ${eff.initX1.toFixed(3)} , v0 = ${eff.initX2.toFixed(3)}
+zeta = ${eff.zeta.toFixed(4)} , wn = ${eff.wn.toFixed(4)}
+
+s1 = ${formatComplex(poles[0].re, poles[0].im)}
+s2 = ${formatComplex(poles[1].re, poles[1].im)}`;
+
+		if (cls.state === "unstable") {
+			els.modeChip.textContent = "Status: RED ALERT";
+			els.modeChip.className = "status-chip unstable";
+		} else if (cls.state === "warning") {
+			els.modeChip.textContent = "Status: Marginal";
+			els.modeChip.className = "status-chip";
+		} else {
+			els.modeChip.textContent = "Status: Monitoring";
+			els.modeChip.className = "status-chip";
+		}
+	}
+
+	function refreshVisuals() {
+		const raw = getRawParams();
+		const eff = effectiveFromRaw(raw);
+		const poles = computePoles(eff.zeta, eff.wn);
+		const cls = classifySystem(poles);
+		buildPowerChart(cls.state === "unstable", eff.xWindow);
+		buildPoleChart(poles, cls.state === "unstable");
+		powerChart.data.datasets[0].data = [{ x: 0, y: eff.initX1 }];
+		powerChart.update("none");
+		updateReadouts(eff, poles, cls);
+	}
+
+	function stepSimulationFrame(ts) {
+		if (!sim.running) return;
+
+		if (sim.lastTs === null) sim.lastTs = ts;
+		let elapsed = ((ts - sim.lastTs) / 1000) * sim.effective.speed;
+		sim.lastTs = ts;
+		elapsed = Math.min(0.12, Math.max(0.001, elapsed));
+
+		const wn = sim.effective.wn;
+		const stableDt = Math.min(0.01, 0.25 / Math.max(wn, 0.1));
+		let remaining = elapsed;
+		let latestY = sim.x1;
+
+		while (remaining > 1e-9) {
+			const h = Math.min(stableDt, remaining);
+			remaining -= h;
+
+			const dx1 = sim.x2;
+			const dx2 = -2 * sim.effective.zeta * wn * sim.x2 - wn * wn * sim.x1 + sim.effective.K;
+
+			sim.x1 += dx1 * h;
+			sim.x2 += dx2 * h;
+			sim.simTime += h;
+			latestY = sim.x1;
+
+			if (!Number.isFinite(sim.x1) || Math.abs(sim.x1) > ABS_LIMIT) {
+				stopSimulation("Numerical overflow: simulation stopped");
+				return;
+			}
+
+			sim.points.push({ x: sim.simTime, y: sim.x1 });
+		}
+
+		compressPoints();
+		powerChart.data.datasets[0].data = sim.points;
+		adjustXAxis(sim.simTime);
+		adjustYAxis(latestY);
+		powerChart.update("none");
+
+		animationFrameId = requestAnimationFrame(stepSimulationFrame);
+	}
+
+	function startSimulation() {
+		cancelLoop();
+
+		const raw = getRawParams();
+		const eff = effectiveFromRaw(raw);
+		const poles = computePoles(eff.zeta, eff.wn);
+		const cls = classifySystem(poles);
+
+		sim.effective = eff;
+		sim.running = true;
+		sim.simTime = 0;
+		sim.x1 = eff.initX1;
+		sim.x2 = eff.initX2;
+		sim.lastTs = null;
+		sim.points = [{ x: 0, y: sim.x1 }];
+
+		buildPowerChart(cls.state === "unstable", eff.xWindow);
+		buildPoleChart(poles, cls.state === "unstable");
+		powerChart.data.datasets[0].data = sim.points;
+		powerChart.update("none");
+
+		updateReadouts(eff, poles, cls);
+
+		els.runBtn.disabled = true;
+		els.stopBtn.disabled = false;
+
+		animationFrameId = requestAnimationFrame(stepSimulationFrame);
+	}
+
+	function stopSimulation(message) {
+		sim.running = false;
+		cancelLoop();
+		els.runBtn.disabled = false;
+		els.stopBtn.disabled = true;
+		if (message) {
+			els.stabilityReadout.textContent = `${els.stabilityReadout.textContent}\n${message}`;
+		}
+	}
+
+	function applyChernobylPreset() {
+		els.wn.value = "2.2";
+		els.p0.value = "0.30";
+		els.q0.value = "0.00";
+		els.x0.value = "2.70";
+		els.xwin.value = "40";
+		els.rodDepth.value = "10";
+		els.kr.value = "0.35";
+		els.kx.value = "0.40";
+		els.kv.value = "2.10";
+		els.cVoid.value = "1.60";
+		els.zModerator.value = "-0.22";
+		els.aProd.value = "0.35";
+		els.bDecay.value = "0.05";
+		els.speed.value = "1.25";
+		syncLabels();
+		els.chernobylNote.textContent = "Chernobyl scenario: reduced rod insertion, stronger void feedback, and low damping push poles toward the right-half plane, creating a rapid power excursion.";
+	}
+
+	els.runBtn.addEventListener("click", startSimulation);
+	els.stopBtn.addEventListener("click", () => stopSimulation("Simulation paused"));
+	els.chernobylBtn.addEventListener("click", () => {
+		applyChernobylPreset();
+		startSimulation();
+	});
+
+	["wn", "p0", "q0", "x0", "xwin", "rodDepth", "kr", "kx", "kv", "cVoid", "zModerator", "aProd", "bDecay", "speed"].forEach((id) => {
+		els[id].addEventListener("input", () => {
+			syncLabels();
+			els.chernobylNote.textContent = "";
+			if (sim.running) {
+				startSimulation();
+			} else {
+				refreshVisuals();
+			}
+		});
+	});
+
+	syncLabels();
+	bindSliderHints();
+	refreshVisuals();
+	els.stopBtn.disabled = true;
+</script>
+
+</body>
+</html>
