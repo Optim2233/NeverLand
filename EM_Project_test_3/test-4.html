@@ -261,7 +261,6 @@
 			overflow: auto;
 		}
 
-		.dash.dragging,
 		.dash.resizing {
 			user-select: none;
 		}
@@ -272,13 +271,13 @@
 			background: linear-gradient(180deg, rgba(12, 20, 32, 0.75), rgba(8, 14, 23, 0.92));
 			padding: 8px;
 			min-height: 260px;
-			min-width: 0;
 			display: flex;
 			flex-direction: column;
 			overflow: hidden;
 			position: relative;
 			width: 520px;
 			height: 300px;
+			min-width: 0;
 		}
 
 		.resize-handle {
@@ -386,54 +385,6 @@
 		<div class="layout">
 			<aside class="panel">
 				<div class="section">
-					<h3>Feedback Coefficients</h3>
-					<div class="row">
-						<label>Control Rod Depth [% insertion] <span id="rodVal" class="val"></span></label>
-						<input id="rodDepth" type="range" min="0" max="100" step="1" value="62"
-							data-effect="Higher rod insertion usually increases damping and stability in this mapped model." />
-					</div>
-					<div class="row">
-						<label>k<sub>r</sub> (rod worth) [delta-rho fraction] <span id="krVal" class="val"></span></label>
-						<input id="kr" type="range" min="0" max="2" step="0.01" value="0.95"
-							data-effect="Amplifies the stabilizing impact of rod insertion on effective damping zeta." />
-					</div>
-					<div class="row">
-						<label>k<sub>x</sub> (precursor feedback) [1/p.u.] <span id="kxVal" class="val"></span></label>
-						<input id="kx" type="range" min="0" max="1.5" step="0.01" value="0.30"
-							data-effect="Higher kx raises precursor contribution to zeta; typically more damping/stability." />
-					</div>
-					<div class="row">
-						<label>k<sub>v</sub> (void coefficient) [1/p.u.] <span id="kvVal" class="val"></span></label>
-						<input id="kv" type="range" min="0" max="2.2" step="0.01" value="1.05"
-							data-effect="Higher kv subtracts more from zeta via void feedback; can push poles right (less stable)." />
-					</div>
-					<div class="row">
-						<label>c (void gain from power) [p.u./p.u.] <span id="cVal" class="val"></span></label>
-						<input id="cVoid" type="range" min="0" max="2" step="0.01" value="0.42"
-							data-effect="Controls how strongly power level feeds into the effective gain term K." />
-					</div>
-					<div class="row">
-						<label>&zeta;<sub>moderator</sub> bias [dimensionless] <span id="zmodVal" class="val"></span></label>
-						<input id="zModerator" type="range" min="-0.4" max="1.2" step="0.01" value="0.14"
-							data-effect="Direct baseline shift of effective damping zeta. More negative means less stable." />
-					</div>
-				</div>
-
-				<div class="section">
-					<h3>Xenon Kinetics</h3>
-					<div class="row">
-						<label>a (precursor production) [1/s] <span id="aVal" class="val"></span></label>
-						<input id="aProd" type="range" min="0" max="1.2" step="0.01" value="0.22"
-							data-effect="Raises effective gain K in this reduced model; response amplitude tends to increase." />
-					</div>
-					<div class="row">
-						<label>b (precursor decay) [1/s] <span id="bVal" class="val"></span></label>
-						<input id="bDecay" type="range" min="0.01" max="1.2" step="0.01" value="0.08"
-							data-effect="Higher decay reduces effective gain K contribution from precursor inventory." />
-					</div>
-				</div>
-
-				<div class="section">
 					<h3>Live Stability</h3>
 					<div id="stabilityReadout" class="readout"></div>
 				</div>
@@ -465,16 +416,21 @@
 						</div>
 						<div class="actions wide">
 							<button id="responseToggleBtn">Use Laplace Response</button>
-							<button id="openTest4Btn">General Controls</button>
+							<button id="openTest3Btn">Open test-3.html</button>
 						</div>
 					</div>
 
 					<div class="section">
-						<h3>Core Dynamics Inputs</h3>
+						<h3>Dynamic Response Controls</h3>
 						<div class="row">
 							<label>Natural Frequency &omega;<sub>n</sub> [rad/s] <span id="wnVal" class="val"></span></label>
 							<input id="wn" type="range" min="0.2" max="8" step="0.05" value="2.2"
 								data-effect="Higher wn gives faster oscillations/transients; poles move farther from the origin." />
+						</div>
+						<div class="row">
+							<label>Damping Factor &zeta; [dimensionless] <span id="zetaVal" class="val"></span></label>
+							<input id="zeta" type="range" min="-1.2" max="2.0" step="0.01" value="0.54"
+								data-effect="Combined damping control (including xenon effects). Higher ζ gives faster decay and stronger stability; negative ζ causes growing oscillations." />
 						</div>
 						<div class="row">
 							<label>Initial Power P(0) [% of P<sub>nom</sub>] <span id="p0Val" class="val"></span></label>
@@ -485,11 +441,6 @@
 							<label>Initial dP/dt [p.u./s] <span id="q0Val" class="val"></span></label>
 							<input id="q0" type="range" min="-2" max="2" step="0.01" value="0.00"
 								data-effect="Initial slope of power. Positive makes power rise immediately; negative makes it drop first." />
-						</div>
-						<div class="row">
-							<label>Initial Precursor C(0) [p.u.] <span id="x0Val" class="val"></span></label>
-							<input id="x0" type="range" min="0" max="4" step="0.01" value="0.25"
-								data-effect="Raises delayed-neutron feedback contribution in the mapped damping term." />
 						</div>
 						<div class="row">
 							<label>Initial X-Window (s) <span id="xwinVal" class="val"></span></label>
@@ -552,7 +503,7 @@
 		helperToggleBtn: document.getElementById("helperToggleBtn"),
 		helperFocusBtn: document.getElementById("helperFocusBtn"),
 		responseToggleBtn: document.getElementById("responseToggleBtn"),
-		openTest4Btn: document.getElementById("openTest4Btn"),
+		openTest3Btn: document.getElementById("openTest3Btn"),
 		modeChip: document.getElementById("modeChip"),
 		dash: document.getElementById("dash"),
 		powerCard: document.getElementById("powerCard"),
@@ -562,30 +513,14 @@
 		wn: document.getElementById("wn"),
 		p0: document.getElementById("p0"),
 		q0: document.getElementById("q0"),
-		x0: document.getElementById("x0"),
 		xwin: document.getElementById("xwin"),
-		rodDepth: document.getElementById("rodDepth"),
-		kr: document.getElementById("kr"),
-		kx: document.getElementById("kx"),
-		kv: document.getElementById("kv"),
-		cVoid: document.getElementById("cVoid"),
-		zModerator: document.getElementById("zModerator"),
-		aProd: document.getElementById("aProd"),
-		bDecay: document.getElementById("bDecay"),
+		zeta: document.getElementById("zeta"),
 		speed: document.getElementById("speed"),
 		wnVal: document.getElementById("wnVal"),
 		p0Val: document.getElementById("p0Val"),
 		q0Val: document.getElementById("q0Val"),
-		x0Val: document.getElementById("x0Val"),
 		xwinVal: document.getElementById("xwinVal"),
-		rodVal: document.getElementById("rodVal"),
-		krVal: document.getElementById("krVal"),
-		kxVal: document.getElementById("kxVal"),
-		kvVal: document.getElementById("kvVal"),
-		cVal: document.getElementById("cVal"),
-		zmodVal: document.getElementById("zmodVal"),
-		aVal: document.getElementById("aVal"),
-		bVal: document.getElementById("bVal"),
+		zetaVal: document.getElementById("zetaVal"),
 		speedVal: document.getElementById("speedVal"),
 		sliderHintText: document.getElementById("sliderHintText")
 		,chernobylNote: document.getElementById("chernobylNote")
@@ -620,16 +555,8 @@
 		els.wnVal.textContent = `${num("wn").toFixed(2)} rad/s`;
 		els.p0Val.textContent = `${(num("p0") * 100).toFixed(1)}%`;
 		els.q0Val.textContent = `${num("q0").toFixed(2)} /s`;
-		els.x0Val.textContent = `${num("x0").toFixed(2)} p.u.`;
 		els.xwinVal.textContent = `${Math.round(num("xwin"))} s`;
-		els.rodVal.textContent = `${Math.round(num("rodDepth"))}%`;
-		els.krVal.textContent = num("kr").toFixed(2);
-		els.kxVal.textContent = num("kx").toFixed(2);
-		els.kvVal.textContent = num("kv").toFixed(2);
-		els.cVal.textContent = num("cVoid").toFixed(2);
-		els.zmodVal.textContent = num("zModerator").toFixed(2);
-		els.aVal.textContent = `${num("aProd").toFixed(2)} 1/s`;
-		els.bVal.textContent = `${num("bDecay").toFixed(2)} 1/s`;
+		els.zetaVal.textContent = num("zeta").toFixed(2);
 		els.speedVal.textContent = `${num("speed").toFixed(2)}x`;
 	}
 
@@ -658,23 +585,15 @@
 			wn: Math.max(0.2, num("wn")),
 			p0: Math.max(0.01, num("p0")),
 			q0: num("q0"),
-			x0: Math.max(0, num("x0")),
 			xWindow: num("xwin"),
-			rodDepth: num("rodDepth") / 100,
-			kr: num("kr"),
-			kx: num("kx"),
-			kv: num("kv"),
-			cVoid: num("cVoid"),
-			zModerator: num("zModerator"),
-			aProd: num("aProd"),
-			bDecay: num("bDecay"),
+			zeta: num("zeta"),
 			speed: Math.max(0.25, num("speed"))
 		};
 	}
 
 	function effectiveFromRaw(p) {
-		const zeta = p.zModerator + p.kr * p.rodDepth + p.kx * p.x0 - p.kv * (p.cVoid * Math.max(0, p.p0));
-		const gain = Math.max(0.05, p.p0 * (1 + p.aProd) - p.bDecay * p.x0 + 0.25 * p.cVoid + 0.05);
+		const zeta = p.zeta;
+		const gain = Math.max(0.05, p.p0 + 0.05);
 		return {
 			K: gain,
 			zeta,
@@ -1118,19 +1037,11 @@ s<sub>2</sub> = ${formatComplex(poles[1].re, poles[1].im)}`;
 		els.wn.value = "2.2";
 		els.p0.value = "0.30";
 		els.q0.value = "0.00";
-		els.x0.value = "2.70";
 		els.xwin.value = "40";
-		els.rodDepth.value = "10";
-		els.kr.value = "0.35";
-		els.kx.value = "0.40";
-		els.kv.value = "2.10";
-		els.cVoid.value = "1.60";
-		els.zModerator.value = "-0.22";
-		els.aProd.value = "0.35";
-		els.bDecay.value = "0.05";
+		els.zeta.value = "-0.72";
 		els.speed.value = "1.25";
 		syncLabels();
-		els.chernobylNote.textContent = "Chernobyl scenario: reduced rod insertion, stronger void feedback, and low damping push poles toward the right-half plane, creating a rapid power excursion.";
+		els.chernobylNote.textContent = "Chernobyl scenario: strongly negative damping (ζ < 0) pushes poles toward the right-half plane, creating a rapid power excursion.";
 	}
 
 	els.runBtn.addEventListener("click", startSimulation);
@@ -1148,8 +1059,8 @@ s<sub>2</sub> = ${formatComplex(poles[1].re, poles[1].im)}`;
 			refreshVisuals();
 		}
 	});
-	els.openTest4Btn.addEventListener("click", () => {
-		window.location.href = "test-4.html";
+	els.openTest3Btn.addEventListener("click", () => {
+		window.location.href = "Adminstrator Controls";
 	});
 	els.helperToggleBtn.addEventListener("click", () => {
 		helpersOn = !helpersOn;
@@ -1160,7 +1071,7 @@ s<sub>2</sub> = ${formatComplex(poles[1].re, poles[1].im)}`;
 		setHelperVisibility();
 	});
 
-	["wn", "p0", "q0", "x0", "xwin", "rodDepth", "kr", "kx", "kv", "cVoid", "zModerator", "aProd", "bDecay", "speed"].forEach((id) => {
+	["wn", "p0", "q0", "xwin", "zeta", "speed"].forEach((id) => {
 		els[id].addEventListener("input", () => {
 			syncLabels();
 			els.chernobylNote.textContent = "";
